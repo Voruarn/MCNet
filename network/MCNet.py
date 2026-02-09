@@ -167,7 +167,7 @@ class MultiScaleOptimizer(nn.Module):
         attn_out, _ = self.cross_attn(feat_c4, feat_c3, feat_c2)  # (B, H*W, 256)
         attn_feat = attn_out.permute(0, 2, 1).view(B, C, H, W)  # 恢复空间维度
         
-        combined_feat = attn_feat + feat_c4 + feat_c3 + feat_c2
+        combined_feat = attn_feat + fused_c4_up + (rgb_c3_up + depth_c3_up) + (rgb_c2 + depth_c2) 
         optimized_feat = self.refine(combined_feat)  # 减少冗余噪声
         
         return optimized_feat
