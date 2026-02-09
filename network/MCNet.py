@@ -160,14 +160,18 @@ class MultiScaleOptimizer(nn.Module):
         fused_c4_up = F.interpolate(fused_c4, size=(H2, W2), mode='bilinear', align_corners=True)
         
         B, C, H, W = fused_c4_up.shape
+
+        feat_c3 = rgb_c3_up + depth_c3_up
+        feat_c2 = rgb_c2 + depth_c2
+
         feat_c4 = fused_c4_up.flatten(2).permute(0, 2, 1) # (B, H*W, 256) - 查询（语义主导）
-        feat_c3 = (rgb_c3_up + depth_c3_up).flatten(2).permute(0, 2, 1)   # (B, H*W, 256)
-        feat_c2 = (rgb_c2 + depth_c2).flatten(2).permute(0, 2, 1)      # (B, H*W, 256)
+        feat_c3_flat = feat_c3.flatten(2).permute(0, 2, 1)   # (B, H*W, 256)
+        feat_c2_flat = feat_c2.flatten(2).permute(0, 2, 1)      # (B, H*W, 256)
         
-        attn_out, _ = self.cross_attn(feat_c4, feat_c3, feat_c2)  # (B, H*W, 256)
+        attn_out, _ = self.cross_attn(feat_c4, feat_c3_flat, feat_c2_flat)  # (B, H*W, 256)
         attn_feat = attn_out.permute(0, 2, 1).view(B, C, H, W)  # 恢复空间维度
         
-        combined_feat = attn_feat + fused_c4_up + (rgb_c3_up + depth_c3_up) + (rgb_c2 + depth_c2) 
+        combined_feat = attn_feat + fused_c4_up + feat_c3 + feat_c2 
         optimized_feat = self.refine(combined_feat)  # 减少冗余噪声
         
         return optimized_feat
